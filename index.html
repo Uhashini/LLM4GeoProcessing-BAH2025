@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIS Assistant - Spatial Analysis Chatbot</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            backdrop-filter: blur(10px);
+        }
+
+        .chat-panel {
+            width: 40%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .chat-header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .message {
+            margin-bottom: 20px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-message {
+            text-align: right;
+        }
+
+        .bot-message {
+            text-align: left;
+        }
+
+        .message-bubble {
+            display: inline-block;
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            line-height: 1.4;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-message .message-bubble {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .bot-message .message-bubble {
+            background: white;
+            color: #333;
+            border: 1px solid #e0e0e0;
+        }
+
+        .chat-input {
+            display: flex;
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .send-button {
+            margin-left: 10px;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .send-button:active {
+            transform: translateY(0);
+        }
+
+        .map-panel {
+            width: 60%;
+            position: relative;
+            background: white;
+        }
+
+        .map-container {
+            height: 70%;
+            position: relative;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .graph-container {
+            height: 30%;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            flex-direction: column;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            flex-direction: column;
+            color: #666;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 10px 16px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            margin-bottom: 10px;
+        }
+
+        .typing-indicator.show {
+            display: block;
+        }
+
+        .dot {
+            height: 8px;
+            width: 8px;
+            background-color: #999;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 3px;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .map-header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 15px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .status-bar {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #666;
+            backdrop-filter: blur(10px);
+        }
+
+        .sample-queries {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .sample-queries h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #666;
+        }
+
+        .query-chip {
+            display: inline-block;
+            background: #e9ecef;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            margin: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #495057;
+        }
+
+        .query-chip:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .legend h4 {
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .legend-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            border-radius: 3px;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .graph-placeholder {
+            text-align: center;
+            color: #999;
+            font-size: 14px;
+        }
+
+        .graph-image {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="chat-panel">
+            <div class="chat-header">
+                <h1>🌍 GIS Assistant</h1>
+                <p>Your intelligent spatial analysis companion</p>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="message bot-message">
+                    <div class="message-bubble">
+                        👋 Hello! I'm your GIS Assistant. I can help you analyze spatial data, create maps, and visualize geographic information. Try asking me about hospitals in Chennai, rainfall patterns, or road networks in any city!
+                    </div>
+                </div>
+            </div>
+
+            <div class="typing-indicator" id="typingIndicator">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </div>
+
+            <div class="sample-queries">
+                <h3>💡 Sample Queries:</h3>
+                <div class="query-chip" onclick="sendSampleQuery('Show hospitals in Chennai with 15km radius')">🏥 Hospitals in Chennai</div>
+                <div class="query-chip" onclick="sendSampleQuery('Rainfall patterns in Mumbai')">🌧️ Rainfall in Mumbai</div>
+                <div class="query-chip" onclick="sendSampleQuery('Road network in Bangalore')">🛣️ Roads in Bangalore</div>
+                <div class="query-chip" onclick="sendSampleQuery('Temperature trends in Delhi')">🌡️ Temperature in Delhi</div>
+            </div>
+
+            <div class="chat-input">
+                <input type="text" id="userInput" placeholder="Ask me about spatial data analysis..." onkeypress="handleKeyPress(event)">
+                <button class="send-button" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+
+        <div class="map-panel">
+            <div class="map-header">
+                <span id="mapTitle">📍 Interactive Map View</span>
+            </div>
+            <div class="status-bar" id="statusBar">Ready</div>
+            
+            <div class="map-container">
+                <div id="map"></div>
+                <div class="legend" id="mapLegend" style="display: none;">
+                    <h4>🗺️ Legend</h4>
+                    <div id="legendContent"></div>
+                </div>
+            </div>
+            
+            <div class="graph-container">
+                <div class="graph-placeholder" id="graphPlaceholder">
+                    📊 Analysis charts will appear here
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script>
+        let map;
+        let currentMarkers = [];
+        let currentLayers = [];
+        let messageId = 0;
+
+        // Initialize the map
+        function initializeMap() {
+            map = L.map('map').setView([13.0827, 80.2707], 10); // Default to Chennai
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Add some sample markers for demonstration
+            addSampleMarkers();
+        }
+
+        // Add sample markers for initial display
+        function addSampleMarkers() {
+            const sampleLocations = [
+                { lat: 13.0827, lng: 80.2707, name: "Chennai Central", type: "city" },
+                { lat: 13.0569, lng: 80.2422, name: "Sample Hospital", type: "hospital" },
+                { lat: 13.1025, lng: 80.2547, name: "Weather Station", type: "weather" }
+            ];
+
+            sampleLocations.forEach(location => {
+                const icon = getIconForType(location.type);
+                const marker = L.marker([location.lat, location.lng])
+                    .addTo(map)
+                    .bindPopup(`<b>${location.name}</b><br>Type: ${location.type}`);
+                currentMarkers.push(marker);
+            });
+        }
+
+        // Get appropriate icon based on type
+        function getIconForType(type) {
+            const icons = {
+                hospital: '🏥',
+                weather: '🌤️',
+                city: '🏙️',
+                road: '🛣️',
+                rain: '🌧️'
+            };
+            return icons[type] || '📍';
+        }
+
+        // Clear existing markers and layers
+        function clearMap() {
+            currentMarkers.forEach(marker => map.removeLayer(marker));
+            currentLayers.forEach(layer => map.removeLayer(layer));
+            currentMarkers = [];
+            currentLayers = [];
+            document.getElementById('mapLegend').style.display = 'none';
+        }
+
+        // Update map based on query
+        function updateMap(query, location = null) {
+            clearMap();
+            updateStatus('Processing query...');
+
+            // Simulate API call to your backend
+            setTimeout(() => {
+                const analysisResult = simulateBackendAnalysis(query);
+                renderMapData(analysisResult);
+                updateMapTitle(analysisResult.title);
+                updateStatus('Map updated');
+            }, 1500);
+        }
+
+        // Simulate backend analysis (replace with actual API call)
+        function simulateBackendAnalysis(query) {
+            const queryLower = query.toLowerCase();
+            
+            if (queryLower.includes('hospital')) {
+                return {
+                    title: 'Hospitals Analysis',
+                    center: [13.0827, 80.2707],
+                    zoom: 11,
+                    markers: [
+                        { lat: 13.0569, lng: 80.2422, name: "Apollo Hospital", type: "hospital" },
+                        { lat: 13.0878, lng: 80.2785, name: "Fortis Hospital", type: "hospital" },
+                        { lat: 13.0458, lng: 80.2451, name: "AIIMS Chennai", type: "hospital" }
+                    ],
+                    layers: ['hospitals'],
+                    graph: 'hospital_distribution.png'
+                };
+            } else if (queryLower.includes('rain') || queryLower.includes('precipitation')) {
+                return {
+                    title: 'Rainfall Analysis',
+                    center: [19.0760, 72.8777],
+                    zoom: 10,
+                    markers: [
+                        { lat: 19.0760, lng: 72.8777, name: "Mumbai Central", type: "rain" },
+                        { lat: 19.1136, lng: 72.8697, name: "High Rainfall Zone", type: "rain" },
+                        { lat: 19.0330, lng: 72.8820, name: "Moderate Rainfall", type: "rain" }
+                    ],
+                    layers: ['precipitation'],
+                    graph: 'rainfall_chart.png'
+                };
+            } else if (queryLower.includes('road')) {
+                return {
+                    title: 'Road Network Analysis',
+                    center: [12.9716, 77.5946],
+                    zoom: 11,
+                    markers: [
+                        { lat: 12.9716, lng: 77.5946, name: "Bangalore Central", type: "city" },
+                        { lat: 12.9698, lng: 77.5986, name: "Major Junction", type: "road" },
+                        { lat: 12.9726, lng: 77.5896, name: "Highway Access", type: "road" }
+                    ],
+                    layers: ['roads'],
+                    graph: 'road_density.png'
+                };
+            } else if (queryLower.includes('temperature')) {
+                return {
+                    title: 'Temperature Analysis',
+                    center: [28.6139, 77.2090],
+                    zoom: 10,
+                    markers: [
+                        { lat: 28.6139, lng: 77.2090, name: "Delhi Central", type: "weather" },
+                        { lat: 28.6519, lng: 77.2315, name: "High Temp Zone", type: "weather" },
+                        { lat: 28.5706, lng: 77.1783, name: "Moderate Temp", type: "weather" }
+                    ],
+                    layers: ['temperature'],
+                    graph: 'temperature_trend.png'
+                };
+            }
+            
+            return {
+                title: 'General Analysis',
+                center: [20.5937, 78.9629],
+                zoom: 5,
+                markers: [],
+                layers: [],
+                graph: null
+            };
+        }
+
+        // Render map data
+        function renderMapData(data) {
+            // Set map view
+            map.setView(data.center, data.zoom);
+
+            // Add markers
+            data.markers.forEach(markerData => {
+                const marker = L.marker([markerData.lat, markerData.lng])
+                    .addTo(map)
+                    .bindPopup(`<b>${markerData.name}</b><br>Type: ${markerData.type}`);
+                currentMarkers.push(marker);
+            });
+
+            // Add buffer zone if applicable
+            if (data.markers.length > 0) {
+                const circle = L.circle(data.center, {
+                    color: 'orange',
+                    fillColor: 'orange',
+                    fillOpacity: 0.1,
+                    radius: 15000 // 15km radius
+                }).addTo(map);
+                currentLayers.push(circle);
+            }
+
+            // Update legend
+            updateLegend(data.layers);
+
+            // Update graph
+            if (data.graph) {
+                updateGraph(data.graph);
+            }
+        }
+
+        // Update legend
+        function updateLegend(layers) {
+            const legendContent = document.getElementById('legendContent');
+            const legend = document.getElementById('mapLegend');
+            
+            if (layers.length > 0) {
+                legendContent.innerHTML = '';
+                layers.forEach(layer => {
+                    const item = document.createElement('div');
+                    item.className = 'legend-item';
+                    item.innerHTML = `
+                        <div class="legend-icon" style="background: ${getLayerColor(layer)}"></div>
+                        <span>${layer.charAt(0).toUpperCase() + layer.slice(1)}</span>
+                    `;
+                    legendContent.appendChild(item);
+                });
+                legend.style.display = 'block';
+            } else {
+                legend.style.display = 'none';
+            }
+        }
+
+        // Get color for layer type
+        function getLayerColor(layer) {
+            const colors = {
+                hospitals: '#ff4444',
+                roads: '#888888',
+                precipitation: '#4444ff',
+                temperature: '#ff8800'
+            };
+            return colors[layer] || '#666666';
+        }
+
+        // Update graph display
+        function updateGraph(graphPath) {
+            const placeholder = document.getElementById('graphPlaceholder');
+            placeholder.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Generating analysis chart...</p>
+                </div>
+            `;
+            
+            // Simulate graph generation
+            setTimeout(() => {
+                placeholder.innerHTML = `
+                    <div style="text-align: center;">
+                        <h3 style="margin-bottom: 10px; color: #333;">📊 Analysis Results</h3>
+                        <div style="background: linear-gradient(45deg, #667eea, #764ba2); color: white; padding: 20px; border-radius: 10px; margin: 10px;">
+                            <h4>Data Visualization</h4>
+                            <p>Chart generated based on your query</p>
+                            <small>Real-time spatial analysis complete ✓</small>
+                        </div>
+                    </div>
+                `;
+            }, 2000);
+        }
+
+        // Update map title
+        function updateMapTitle(title) {
+            document.getElementById('mapTitle').textContent = `📍 ${title}`;
+        }
+
+        // Update status bar
+        function updateStatus(status) {
+            document.getElementById('statusBar').textContent = status;
+        }
+
+        // Add message to chat
+        function addMessage(message, isUser = false) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            messageDiv.innerHTML = `<div class="message-bubble">${message.replace(/\n/g, "<br/>")}</div>`;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Show typing indicator
+        function showTypingIndicator() {
+            document.getElementById('typingIndicator').classList.add('show');
+        }
+
+        // Hide typing indicator
+        function hideTypingIndicator() {
+            document.getElementById('typingIndicator').classList.remove('show');
+        }
+
+        // Send message
+        function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                addMessage(message, true);
+                input.value = '';
+                
+                showTypingIndicator();
+                
+                // Simulate bot response
+                setTimeout(() => {
+                    hideTypingIndicator();
+                    const response = generateBotResponse(message);
+                    addMessage(response);
+                    updateMap(message);
+                }, 1000);
+            }
+        }
+
+        // Generate bot response
+        function generateBotResponse(userMessage) {
+            const queryLower = userMessage.toLowerCase();
+            
+            if (queryLower.includes('hospital')) {
+                return "🏥 I've found hospitals in the specified area and updated the map with their locations. The analysis shows the distribution and accessibility of healthcare facilities.";
+            } else if (queryLower.includes('rain') || queryLower.includes('precipitation')) {
+                return "🌧️ Here's the rainfall analysis for your requested location. I've visualized the precipitation patterns and generated a trend chart below the map.";
+            } else if (queryLower.includes('road')) {
+                return "🛣️ I've analyzed the road network in your area. The map shows major roads, highways, and transportation infrastructure with density analysis.";
+            } else if (queryLower.includes('temperature')) {
+                return "🌡️ Temperature analysis complete! I've mapped the thermal patterns and created a trend visualization showing temperature variations over time.";
+            }
+            
+            return "🔍 I've processed your spatial query and updated the map with relevant geographic information. The analysis results are displayed on the interactive map.";
+        }
+
+        // Handle Enter key press
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Send sample query
+        function sendSampleQuery(query) {
+            document.getElementById('userInput').value = query;
+            sendMessage();
+        }
+
+        // Initialize the application
+        window.onload = function() {
+            initializeMap();
+        };
+    </script>
+</body>
+</html>
