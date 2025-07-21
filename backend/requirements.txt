@@ -1,0 +1,7 @@
+Flask
+flask-cors
+geopandas
+shapely
+folium
+matplotlib
+networkx
