@@ -1,12 +1,13 @@
 # LLM4GeoProcessing-BAH2025
 
-# 🌍 LLM-Powered Geospatial Assistant
+#  LLM-Powered Geospatial Assistant
 
 An interactive, AI-driven assistant that transforms natural language queries into dynamic geospatial workflows, maps, and visualizations. Designed for planners, researchers, and emergency responders, it integrates LLM reasoning with real-time spatial data sources.
 
+Demo Link : https://drive.google.com/file/d/1TdwBWu28bOCepypg1AmwgyBUpH8qseqw/view?usp=sharing
 ---
 
-## 📑 Table of Contents
+##  Table of Contents
 
 - [About](#about)
 - [Features](#features)
@@ -17,7 +18,7 @@ An interactive, AI-driven assistant that transforms natural language queries int
 
 ---
 
-## 🧠 About
+##  About
 
 The *LLM-Powered GIS Assistant* enables users to submit queries like "Show rainfall and population density in Chennai" and receive real-time maps, climate graphs, and spatial analysis. It combines natural language understanding from a local LLM with APIs like Open-Meteo, NASA, WorldPop, and OSM.
 
@@ -28,7 +29,7 @@ It is ideal for applications in:
 
 ---
 
-## 🚀 Features
+##  Features
 
 ✅ Accepts natural language spatial queries  
 ✅ Parses and interprets queries via local LLM (Ollama)  
@@ -44,7 +45,7 @@ It is ideal for applications in:
 
 ---
 
-## 🧰 Tech Stack
+##  Tech Stack
 
 | Layer         | Technology                                   |
 |---------------|----------------------------------------------|
@@ -60,7 +61,7 @@ It is ideal for applications in:
 
 ## ⚙ Getting Started
 
-### ✅ Prerequisites
+###  Prerequisites
 
 - Python 3.9+
 - Node.js & npm (for frontend)
@@ -70,7 +71,7 @@ It is ideal for applications in:
 
 ---
 
-### 🔧 Backend Setup
+###  Backend Setup
 
 ```bash
 # 1. Clone the repo
@@ -90,4 +91,4 @@ pip install flask folium geopandas osmnx shapely requests matplotlib numpy
 python app.py
 
 ```
-Demo Link : https://drive.google.com/file/d/1TdwBWu28bOCepypg1AmwgyBUpH8qseqw/view?usp=sharing
+
